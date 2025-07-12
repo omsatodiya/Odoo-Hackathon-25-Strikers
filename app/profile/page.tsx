@@ -558,6 +558,7 @@ export default function ProfilePage() {
 
         {/* Hidden file input */}
         <input
+        title="files"
           ref={fileInputRef}
           type="file"
           accept="image/*"
@@ -732,6 +733,7 @@ export default function ProfilePage() {
                       <Badge key={index} variant="secondary" className="gap-1">
                         {skill}
                         <button
+                        title="skill-remove"
                           onClick={() => removeSkillOffered(skill)}
                           className="ml-1 hover:text-destructive"
                         >
@@ -787,6 +789,7 @@ export default function ProfilePage() {
                       <Badge key={index} variant="outline" className="gap-1">
                         {skill}
                         <button
+                        title="skill-wanted"
                           onClick={() => removeSkillWanted(skill)}
                           className="ml-1 hover:text-destructive"
                         >
