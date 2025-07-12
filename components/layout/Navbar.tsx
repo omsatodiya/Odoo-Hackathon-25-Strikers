@@ -31,10 +31,6 @@ interface UserProfile {
 }
 
 const navItems: NavItem[] = [
-  { label: "Home", href: "/", icon: Home },
-  { label: "Skills", href: "/skills", icon: BookOpen },
-  { label: "About", href: "/about", icon: Info },
-  { label: "Contact", href: "/contact", icon: Phone },
 ];
 
 export default function Navbar() {

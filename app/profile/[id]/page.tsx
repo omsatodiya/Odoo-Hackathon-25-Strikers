@@ -148,6 +148,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   <Button
                     variant="outline"
                     className="flex-1 border-green-600 text-green-600 hover:bg-green-50 font-medium py-2.5"
+                    onClick={() => router.push(`/send-request`)}
                   >
                     <Handshake className="w-4 h-4 mr-2" />
                     Request Skill Swap

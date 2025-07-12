@@ -172,7 +172,7 @@ export default function HomePage() {
                 size="lg"
                 className="bg-white text-blue-600 hover:bg-gray-100"
               >
-                <Link href="/auth" className="flex items-center gap-2">
+                <Link href="/auth/login" className="flex items-center gap-2">
                   Get Started
                   <ArrowRight className="w-5 h-5" />
                 </Link>
@@ -272,7 +272,7 @@ export default function HomePage() {
                   help you grow.
                 </p>
                 <Button size="lg" variant="secondary" asChild>
-                  <Link href="/auth">Sign Up Now</Link>
+                  <Link href="/auth/login">Sign Up Now</Link>
                 </Button>
               </CardContent>
             </Card>
