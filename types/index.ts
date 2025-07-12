@@ -85,4 +85,48 @@ export interface LocationData {
 export interface ApiError {
   message: string;
   code?: string;
+}
+
+// Cloudinary Types
+export interface CloudinaryUploadResponse {
+  public_id: string;
+  secure_url: string;
+  url: string;
+  format: string;
+  width: number;
+  height: number;
+  bytes: number;
+  created_at: string;
+  resource_type: string;
+  folder: string;
+  access_mode: string;
+  asset_id: string;
+  version_id: string;
+  version: number;
+  signature: string;
+  etag: string;
+  placeholder: boolean;
+  original_filename: string;
+}
+
+export interface CloudinaryError {
+  error: {
+    message: string;
+    http_code?: number;
+  };
+}
+
+export interface CloudinaryConfig {
+  cloudName: string;
+  uploadPreset: string;
+  folder: string;
+  maxFileSize: number; // in bytes
+  allowedFormats: string[];
+}
+
+export interface UploadOptions {
+  folder?: string;
+  publicId?: string;
+  transformation?: string;
+  tags?: string[];
 } 

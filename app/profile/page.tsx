@@ -13,9 +13,24 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ArrowLeft,
+  Loader2,
+  Camera,
+  Plus,
+  X,
+  Clock,
+  Calendar,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { getCityFromPincode } from "@/lib/utils/pincode";
+import { uploadToCloudinary } from "@/lib/cloudinary";
+import { CloudinaryUploadResponse } from "@/types";
 import gsap from "gsap";
 
 interface UserData {
@@ -26,13 +41,35 @@ interface UserData {
   city: string;
   state: string;
   pincode: string;
+  avatarUrl?: string;
+  skillsOffered: string[];
+  skillsWanted: string[];
+  isProfilePublic: boolean;
+  availability: {
+    days: string[];
+    timeSlots: {
+      start: string;
+      end: string;
+    }[];
+  };
 }
+
+const DAYS_OF_WEEK = [
+  { id: "monday", label: "Monday" },
+  { id: "tuesday", label: "Tuesday" },
+  { id: "wednesday", label: "Wednesday" },
+  { id: "thursday", label: "Thursday" },
+  { id: "friday", label: "Friday" },
+  { id: "saturday", label: "Saturday" },
+  { id: "sunday", label: "Sunday" },
+];
 
 export default function ProfilePage() {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [userData, setUserData] = useState<UserData>({
     firstName: "",
     lastName: "",
@@ -41,14 +78,47 @@ export default function ProfilePage() {
     city: "",
     state: "",
     pincode: "",
+    avatarUrl: "",
+    skillsOffered: [],
+    skillsWanted: [],
+    isProfilePublic: true,
+    availability: {
+      days: [],
+      timeSlots: [{ start: "09:00", end: "17:00" }],
+    },
   });
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [newSkillOffered, setNewSkillOffered] = useState("");
+  const [newSkillWanted, setNewSkillWanted] = useState("");
 
   const loadingRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const infoCardRef = useRef<HTMLDivElement>(null);
   const deleteDialogRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Calculate profile completion percentage
+  const calculateProfileCompletion = () => {
+    const fields = [
+      userData.firstName,
+      userData.lastName,
+      userData.email,
+      userData.mobile,
+      userData.city,
+      userData.state,
+      userData.pincode,
+      userData.avatarUrl,
+      userData.skillsOffered.length > 0,
+      userData.skillsWanted.length > 0,
+      userData.availability.days.length > 0,
+    ];
+
+    const completedFields = fields.filter(Boolean).length;
+    return Math.round((completedFields / fields.length) * 100);
+  };
+
+  const profileCompletion = calculateProfileCompletion();
 
   // Security check: redirect if not logged in
   useEffect(() => {
@@ -86,6 +156,14 @@ export default function ProfilePage() {
             city: data.city || "",
             state: data.state || "",
             pincode: data.pincode || "",
+            avatarUrl: data.avatarUrl || "",
+            skillsOffered: data.skillsOffered || [],
+            skillsWanted: data.skillsWanted || [],
+            isProfilePublic: data.isProfilePublic !== false, // Default to true
+            availability: data.availability || {
+              days: [],
+              timeSlots: [{ start: "09:00", end: "17:00" }],
+            },
           });
         }
       } catch {
@@ -131,9 +209,16 @@ export default function ProfilePage() {
     }
   }, [loading, mounted]);
 
-  const handleInputChange = async (name: keyof UserData, value: string) => {
+  const handleInputChange = async (
+    name: keyof UserData,
+    value:
+      | string
+      | boolean
+      | string[]
+      | { days: string[]; timeSlots: { start: string; end: string }[] }
+  ) => {
     setUserData((prev) => ({ ...prev, [name]: value }));
-    if (name === "pincode" && value.length === 6) {
+    if (name === "pincode" && typeof value === "string" && value.length === 6) {
       const data = await getCityFromPincode(value);
       if (data) {
         setUserData((prev) => ({
@@ -143,6 +228,163 @@ export default function ProfilePage() {
         }));
       }
     }
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    setUploadingAvatar(true);
+    try {
+      const result: CloudinaryUploadResponse = await uploadToCloudinary(file, {
+        folder: "avatars",
+        tags: ["profile", "avatar"],
+      });
+
+      // Update user data with new avatar URL
+      setUserData((prev) => ({ ...prev, avatarUrl: result.secure_url }));
+
+      // Save to Firestore
+      const user = auth.currentUser;
+      if (user) {
+        const db = getFirestore();
+        await updateDoc(doc(db, "users", user.uid), {
+          avatarUrl: result.secure_url,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      alert("Failed to upload avatar. Please try again.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file");
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image size must be less than 5MB");
+        return;
+      }
+      handleAvatarUpload(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  const getUserInitials = () => {
+    const firstName = userData.firstName || "";
+    const lastName = userData.lastName || "";
+    const email = userData.email || "";
+
+    if (firstName && lastName) {
+      return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    }
+    if (firstName) {
+      return firstName[0].toUpperCase();
+    }
+    if (email) {
+      return email[0].toUpperCase();
+    }
+    return "U";
+  };
+
+  const addSkillOffered = () => {
+    if (
+      newSkillOffered.trim() &&
+      !userData.skillsOffered.includes(newSkillOffered.trim())
+    ) {
+      setUserData((prev) => ({
+        ...prev,
+        skillsOffered: [...prev.skillsOffered, newSkillOffered.trim()],
+      }));
+      setNewSkillOffered("");
+    }
+  };
+
+  const removeSkillOffered = (skill: string) => {
+    setUserData((prev) => ({
+      ...prev,
+      skillsOffered: prev.skillsOffered.filter((s) => s !== skill),
+    }));
+  };
+
+  const addSkillWanted = () => {
+    if (
+      newSkillWanted.trim() &&
+      !userData.skillsWanted.includes(newSkillWanted.trim())
+    ) {
+      setUserData((prev) => ({
+        ...prev,
+        skillsWanted: [...prev.skillsWanted, newSkillWanted.trim()],
+      }));
+      setNewSkillWanted("");
+    }
+  };
+
+  const removeSkillWanted = (skill: string) => {
+    setUserData((prev) => ({
+      ...prev,
+      skillsWanted: prev.skillsWanted.filter((s) => s !== skill),
+    }));
+  };
+
+  const handleDayToggle = (dayId: string) => {
+    setUserData((prev) => ({
+      ...prev,
+      availability: {
+        ...prev.availability,
+        days: prev.availability.days.includes(dayId)
+          ? prev.availability.days.filter((d) => d !== dayId)
+          : [...prev.availability.days, dayId],
+      },
+    }));
+  };
+
+  const addTimeSlot = () => {
+    setUserData((prev) => ({
+      ...prev,
+      availability: {
+        ...prev.availability,
+        timeSlots: [
+          ...prev.availability.timeSlots,
+          { start: "09:00", end: "17:00" },
+        ],
+      },
+    }));
+  };
+
+  const removeTimeSlot = (index: number) => {
+    setUserData((prev) => ({
+      ...prev,
+      availability: {
+        ...prev.availability,
+        timeSlots: prev.availability.timeSlots.filter((_, i) => i !== index),
+      },
+    }));
+  };
+
+  const updateTimeSlot = (
+    index: number,
+    field: "start" | "end",
+    value: string
+  ) => {
+    setUserData((prev) => ({
+      ...prev,
+      availability: {
+        ...prev.availability,
+        timeSlots: prev.availability.timeSlots.map((slot, i) =>
+          i === index ? { ...slot, [field]: value } : slot
+        ),
+      },
+    }));
   };
 
   const handleUpdate = async () => {
@@ -210,7 +452,7 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen flex items-start justify-center px-0 sm:px-4 pt-16 sm:pt-24 pb-8">
-      <div className="relative z-10 w-full max-w-2xl space-y-4 sm:space-y-6">
+      <div className="relative z-10 w-full max-w-4xl space-y-4 sm:space-y-6">
         {/* Header Card */}
         <div
           ref={headerRef}
@@ -259,6 +501,70 @@ export default function ProfilePage() {
             </Button>
           </div>
         </div>
+
+        {/* Profile Completion Card */}
+        <div className="rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-lg">
+          <div className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Profile Completion</h2>
+              <Badge
+                variant={profileCompletion === 100 ? "default" : "secondary"}
+              >
+                {profileCompletion}% Complete
+              </Badge>
+            </div>
+            <Progress value={profileCompletion} className="h-2" />
+            <p className="text-sm text-muted-foreground mt-2">
+              {profileCompletion === 100
+                ? "🎉 Your profile is complete!"
+                : `Complete ${
+                    100 - profileCompletion
+                  } more fields to reach 100%`}
+            </p>
+          </div>
+        </div>
+
+        {/* Avatar Section */}
+        <div className="flex justify-center">
+          <div className="relative group">
+            <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background shadow-lg">
+              <AvatarImage
+                src={userData.avatarUrl}
+                alt={`${userData.firstName} ${userData.lastName}`}
+              />
+              <AvatarFallback className="text-2xl sm:text-3xl font-semibold bg-primary text-primary-foreground">
+                {getUserInitials()}
+              </AvatarFallback>
+            </Avatar>
+
+            {/* Upload Overlay */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-10 w-10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                onClick={triggerFileInput}
+                disabled={uploadingAvatar}
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
         {/* Personal Information Card */}
         <div
           ref={infoCardRef}
@@ -393,29 +699,277 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            {/* error && ( // Original code had this line commented out */}
-            {/*   <Alert // Original code had this line commented out */}
-            {/*     variant="destructive" // Original code had this line commented out */}
-            {/*     className="mt-4 sm:mt-6 animate-shake" // Original code had this line commented out */}
-            {/*   > // Original code had this line commented out */}
-            {/*     <AlertCircle className="h-4 w-4" /> // Original code had this line commented out */}
-            {/*     <AlertDescription className="text-sm">{error}</AlertDescription> // Original code had this line commented out */}
-            {/*   </Alert> // Original code had this line commented out */}
-            {/* ) // Original code had this line commented out */}
-            {isEditing && (
-              <div className="mt-4 sm:mt-6 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(false)}
-                  className="h-8 sm:h-9 text-xs sm:text-sm mr-3"
-                >
-                  Cancel
-                </Button>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Skills Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Skills Offered */}
+          <div className="rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-lg">
+            <div className="p-4 sm:p-6 border-b">
+              <h3 className="text-lg font-semibold">Skills You Offer</h3>
+              <p className="text-sm text-muted-foreground">
+                What skills can you teach others?
+              </p>
+            </div>
+            <div className="p-4 sm:p-6">
+              {isEditing ? (
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newSkillOffered}
+                      onChange={(e) => setNewSkillOffered(e.target.value)}
+                      placeholder="Add a skill (e.g., JavaScript, Cooking)"
+                      className="flex-1"
+                      onKeyPress={(e) => e.key === "Enter" && addSkillOffered()}
+                    />
+                    <Button onClick={addSkillOffered} size="sm">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {userData.skillsOffered.map((skill, index) => (
+                      <Badge key={index} variant="secondary" className="gap-1">
+                        {skill}
+                        <button
+                          onClick={() => removeSkillOffered(skill)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {userData.skillsOffered.length > 0 ? (
+                    userData.skillsOffered.map((skill, index) => (
+                      <Badge key={index} variant="secondary">
+                        {skill}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground">No skills added yet</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Skills Wanted */}
+          <div className="rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-lg">
+            <div className="p-4 sm:p-6 border-b">
+              <h3 className="text-lg font-semibold">
+                Skills You Want to Learn
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                What skills do you want to acquire?
+              </p>
+            </div>
+            <div className="p-4 sm:p-6">
+              {isEditing ? (
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newSkillWanted}
+                      onChange={(e) => setNewSkillWanted(e.target.value)}
+                      placeholder="Add a skill (e.g., Python, Guitar)"
+                      className="flex-1"
+                      onKeyPress={(e) => e.key === "Enter" && addSkillWanted()}
+                    />
+                    <Button onClick={addSkillWanted} size="sm">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {userData.skillsWanted.map((skill, index) => (
+                      <Badge key={index} variant="outline" className="gap-1">
+                        {skill}
+                        <button
+                          onClick={() => removeSkillWanted(skill)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {userData.skillsWanted.length > 0 ? (
+                    userData.skillsWanted.map((skill, index) => (
+                      <Badge key={index} variant="outline">
+                        {skill}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground">No skills added yet</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Visibility */}
+        <div className="rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-lg">
+          <div className="p-4 sm:p-6 border-b">
+            <h3 className="text-lg font-semibold">Profile Visibility</h3>
+            <p className="text-sm text-muted-foreground">
+              Control who can see your profile
+            </p>
+          </div>
+          <div className="p-4 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-medium">Public Profile</Label>
+                <p className="text-sm text-muted-foreground">
+                  {userData.isProfilePublic
+                    ? "Your profile is visible to other users"
+                    : "Your profile is private and hidden from other users"}
+                </p>
+              </div>
+              {isEditing ? (
+                <Switch
+                  checked={userData.isProfilePublic}
+                  onCheckedChange={(checked: boolean) =>
+                    handleInputChange("isProfilePublic", checked)
+                  }
+                />
+              ) : (
+                <Badge
+                  variant={userData.isProfilePublic ? "default" : "secondary"}
+                >
+                  {userData.isProfilePublic ? "Public" : "Private"}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Availability Section */}
+        <div className="rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-lg">
+          <div className="p-4 sm:p-6 border-b">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Availability
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              When are you available for skill exchanges?
+            </p>
+          </div>
+          <div className="p-4 sm:p-6 space-y-6">
+            {/* Days Selection */}
+            <div>
+              <Label className="text-base font-medium mb-3 block">
+                Available Days
+              </Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {DAYS_OF_WEEK.map((day) => (
+                  <div key={day.id} className="flex items-center space-x-2">
+                    {isEditing ? (
+                      <Checkbox
+                        id={day.id}
+                        checked={userData.availability.days.includes(day.id)}
+                        onCheckedChange={() => handleDayToggle(day.id)}
+                      />
+                    ) : (
+                      <div
+                        className={`w-4 h-4 rounded border-2 ${
+                          userData.availability.days.includes(day.id)
+                            ? "bg-primary border-primary"
+                            : "border-muted-foreground"
+                        }`}
+                      />
+                    )}
+                    <Label htmlFor={day.id} className="text-sm font-normal">
+                      {day.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Time Slots */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-base font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Available Times
+                </Label>
+                {isEditing && (
+                  <Button onClick={addTimeSlot} size="sm" variant="outline">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Time
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-3">
+                {userData.availability.timeSlots.map((slot, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    {isEditing ? (
+                      <>
+                        <Input
+                          type="time"
+                          value={slot.start}
+                          onChange={(e) =>
+                            updateTimeSlot(index, "start", e.target.value)
+                          }
+                          className="w-32"
+                        />
+                        <span className="text-muted-foreground">to</span>
+                        <Input
+                          type="time"
+                          value={slot.end}
+                          onChange={(e) =>
+                            updateTimeSlot(index, "end", e.target.value)
+                          }
+                          className="w-32"
+                        />
+                        {userData.availability.timeSlots.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeTimeSlot(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <Badge variant="outline" className="text-sm">
+                        {slot.start} - {slot.end}
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        {isEditing && (
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setIsEditing(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdate} disabled={loading}>
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </div>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </div>
+        )}
+
         {/* Delete Account Dialog */}
         <div className="flex justify-end">
           <Button
