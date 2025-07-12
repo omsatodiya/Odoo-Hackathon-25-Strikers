@@ -1,26 +1,153 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import UserCard from '@/components/ui/UserCard';
-import SearchFilter from '@/components/ui/SearchFilter';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Users, ArrowRight, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import UserCard from "@/components/homepage/UserCard";
+import SearchFilter from "@/components/homepage/SearchFilter";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Users, ArrowRight, Sparkles } from "lucide-react";
+import { getFirestore, collection, getDocs, query } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
+
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl?: string;
+  skillsOffered?: string[];
+  skillsWanted?: string[];
+  city?: string;
+  state?: string;
+  availability?:
+    | string
+    | { timeSlots: { start: string; end: string }[]; days: string[] };
+  profileVisibility?: boolean;
+}
+
+type Availability =
+  | string
+  | { timeSlots: { start: string; end: string }[]; days: string[] };
+function normalizeAvailability(avail: unknown): Availability {
+  if (!avail) return "";
+  if (typeof avail === "string") return avail;
+  if (
+    typeof avail === "object" &&
+    avail !== null &&
+    Array.isArray((avail as { timeSlots?: unknown[] }).timeSlots)
+  ) {
+    // If already correct shape, return as is
+    if (
+      (avail as { timeSlots: unknown[] }).timeSlots.length === 0 ||
+      typeof (avail as { timeSlots: unknown[] }).timeSlots[0] === "object"
+    )
+      return avail as Availability;
+    // If array of strings, convert to array of { start, end }
+    return {
+      ...(avail as { days: string[] }),
+      timeSlots: (avail as { timeSlots: string[] }).timeSlots.map(
+        (slot: string) => {
+          const [start, end] = slot.split("-").map((s) => s.trim());
+          return { start, end };
+        }
+      ),
+    };
+  }
+  return avail as Availability;
+}
 
 export default function HomePage() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<{ uid: string } | null>(null);
 
-  // Fake loading state and static users to demonstrate layout
-  const loading = false;
-  const user = null;
-  const users = [
-    { id: 1, name: 'Jane Doe', skill: 'Web Development' },
-    { id: 2, name: 'John Smith', skill: 'Graphic Design' },
-    { id: 3, name: 'Alice Johnson', skill: 'Photography' },
-    { id: 4, name: 'Bob Lee', skill: 'Writing' }
-  ];
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const db = getFirestore();
+
+        // First, let's fetch all users to see what's in the database
+        const usersQuery = query(collection(db, "users"));
+
+        const querySnapshot = await getDocs(usersQuery);
+        const usersData: User[] = [];
+
+        console.log("Total users found:", querySnapshot.size);
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          console.log("User data:", doc.id, data);
+
+          // Check if user has a completed profile (has essential fields)
+          const hasCompletedProfile =
+            data.firstName &&
+            data.lastName &&
+            data.email &&
+            (data.skillsOffered?.length > 0 || data.skillsWanted?.length > 0);
+
+          if (hasCompletedProfile) {
+            usersData.push({
+              id: doc.id,
+              firstName: data.firstName || "",
+              lastName: data.lastName || "",
+              email: data.email || "",
+              avatarUrl: data.avatarUrl || "",
+              skillsOffered: data.skillsOffered || [],
+              skillsWanted: data.skillsWanted || [],
+              city: data.city || "",
+              state: data.state || "",
+              availability: normalizeAvailability(data.availability),
+              profileVisibility: data.profileVisibility || false,
+            });
+          }
+        });
+
+        console.log("Users with completed profiles:", usersData.length);
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  // Filter users based on search query and exclude current user
+  const filteredUsers = users.filter((userData) => {
+    // Exclude the currently logged-in user
+    if (user && userData.id === user.uid) {
+      return false;
+    }
+
+    if (!searchQuery) return true;
+
+    const searchLower = searchQuery.toLowerCase();
+    const fullName = `${userData.firstName} ${userData.lastName}`.toLowerCase();
+    const skillsOffered = userData.skillsOffered?.join(" ").toLowerCase() || "";
+    const skillsWanted = userData.skillsWanted?.join(" ").toLowerCase() || "";
+    const location = `${userData.city} ${userData.state}`.toLowerCase();
+
+    return (
+      fullName.includes(searchLower) ||
+      skillsOffered.includes(searchLower) ||
+      skillsWanted.includes(searchLower) ||
+      location.includes(searchLower)
+    );
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -36,10 +163,15 @@ export default function HomePage() {
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto">
-              Connect with talented people in your area. Teach what you know, learn what you need.
+              Connect with talented people in your area. Teach what you know,
+              learn what you need.
             </p>
             {!user && (
-              <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+              <Button
+                asChild
+                size="lg"
+                className="bg-white text-blue-600 hover:bg-gray-100"
+              >
                 <Link href="/auth" className="flex items-center gap-2">
                   Get Started
                   <ArrowRight className="w-5 h-5" />
@@ -60,7 +192,8 @@ export default function HomePage() {
               Discover Talented People
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Find skilled individuals ready to share their expertise and learn new things.
+              Find skilled individuals ready to share their expertise and learn
+              new things.
             </p>
           </div>
           <div className="max-w-2xl mx-auto">
@@ -90,17 +223,17 @@ export default function HomePage() {
               </Card>
             ))}
           </div>
-        ) : users.length === 0 ? (
+        ) : filteredUsers.length === 0 ? (
           <Card className="max-w-md mx-auto">
             <CardContent className="p-8 text-center">
               <Sparkles className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {searchQuery ? 'No matches found' : 'No users available'}
+                {searchQuery ? "No matches found" : "No users available"}
               </h3>
               <p className="text-gray-500 mb-4">
                 {searchQuery
-                  ? 'Try adjusting your search terms or filters.'
-                  : 'Be the first to create a profile and start skill swapping!'}
+                  ? "Try adjusting your search terms or filters."
+                  : "Be the first to create a profile and start skill swapping!"}
               </p>
               {!user && (
                 <Button asChild>
@@ -113,26 +246,30 @@ export default function HomePage() {
           <>
             <div className="flex justify-between items-center mb-6 max-w-4xl mx-auto">
               <p className="text-gray-600">
-                Found {users.length} {users.length === 1 ? 'person' : 'people'}
+                Found {filteredUsers.length}{" "}
+                {filteredUsers.length === 1 ? "person" : "people"}
                 {searchQuery && ` matching "${searchQuery}"`}
               </p>
             </div>
             <div className="flex flex-col space-y-6 max-w-4xl mx-auto">
-              {users.map((user) => (
-                <UserCard key={user.id} />
+              {filteredUsers.map((user) => (
+                <UserCard key={user.id} user={user} />
               ))}
             </div>
           </>
         )}
 
         {/* CTA Section */}
-        {!user && users.length > 0 && (
+        {!user && filteredUsers.length > 0 && (
           <div className="mt-16 text-center">
             <Card className="max-w-2xl mx-auto bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0">
               <CardContent className="p-8">
-                <h3 className="text-2xl font-bold mb-4">Ready to Start Swapping Skills?</h3>
+                <h3 className="text-2xl font-bold mb-4">
+                  Ready to Start Swapping Skills?
+                </h3>
                 <p className="text-blue-100 mb-6">
-                  Join our community and connect with amazing people who can help you grow.
+                  Join our community and connect with amazing people who can
+                  help you grow.
                 </p>
                 <Button size="lg" variant="secondary" asChild>
                   <Link href="/auth">Sign Up Now</Link>
