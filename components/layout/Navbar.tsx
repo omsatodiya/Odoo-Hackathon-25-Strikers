@@ -14,15 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  User,
-  LogOut,
-  Home,
-  BookOpen,
-  Info,
-  Phone,
-  Shield,
-} from "lucide-react";
+import { User, LogOut, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -38,8 +30,7 @@ interface UserProfile {
   avatarUrl?: string;
 }
 
-const navItems: NavItem[] = [
-];
+const navItems: NavItem[] = [];
 
 export default function Navbar() {
   const router = useRouter();
