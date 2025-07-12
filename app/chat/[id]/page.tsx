@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { ArrowLeft, Send } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import React from 'react';
 
 const dummyReceiver = {
@@ -21,8 +21,10 @@ const dummyMessages = [
   { id: 3, sender: 'me', text: 'Awesome! I’ll send you the calendar invite.' },
 ];
 
-export default function ChatPage({ params }: { params: { id: string } }) {
+export default function ChatPage() {
   const router = useRouter();
+  const params = useParams(); // ✅ get the `id` from route
+  const userId = params.id;   // e.g. /chat/[id]
 
   return (
     <div className="flex flex-col h-screen bg-muted">
