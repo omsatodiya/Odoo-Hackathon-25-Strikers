@@ -28,6 +28,10 @@ SkillSwap is more than just a directory—it's a community platform for meaningf
 
 ---
 
+## Video Link
+
+- https://drive.google.com/file/d/1Fv03j6jRE-ykOQgNfmoiWNiNNcyr1vt7/view?usp=sharing
+
 ## Getting Started
 
 First, clone the repository and install dependencies:
