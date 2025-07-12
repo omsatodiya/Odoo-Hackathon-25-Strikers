@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import UserCard from '@/components/homepage/UserCard';
-import SearchFilter from '@/components/homepage/SearchFilter';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Users, ArrowRight, Sparkles } from 'lucide-react';
-import { getFirestore, collection, getDocs, query } from 'firebase/firestore';
-import { auth } from '@/lib/firebase';
+import React, { useState, useEffect } from "react";
+import UserCard from "@/components/homepage/UserCard";
+import SearchFilter from "@/components/homepage/SearchFilter";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Users, ArrowRight, Sparkles } from "lucide-react";
+import { getFirestore, collection, getDocs, query } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
 
 interface User {
   id: string;
@@ -32,17 +32,17 @@ type Availability =
   | { timeSlots: { start: string; end: string }[]; days: string[] };
 
 function normalizeAvailability(avail: unknown): Availability {
-  if (!avail) return '';
-  if (typeof avail === 'string') return avail;
+  if (!avail) return "";
+  if (typeof avail === "string") return avail;
   if (
-    typeof avail === 'object' &&
+    typeof avail === "object" &&
     avail !== null &&
     Array.isArray((avail as { timeSlots?: unknown[] }).timeSlots)
   ) {
     // If already correct shape, return as is
     if (
       (avail as { timeSlots: unknown[] }).timeSlots.length === 0 ||
-      typeof (avail as { timeSlots: unknown[] }).timeSlots[0] === 'object'
+      typeof (avail as { timeSlots: unknown[] }).timeSlots[0] === "object"
     )
       return avail as Availability;
     // If array of strings, convert to array of { start, end }
@@ -50,7 +50,7 @@ function normalizeAvailability(avail: unknown): Availability {
       ...(avail as { days: string[] }),
       timeSlots: (avail as { timeSlots: string[] }).timeSlots.map(
         (slot: string) => {
-          const [start, end] = slot.split('-').map((s) => s.trim());
+          const [start, end] = slot.split("-").map((s) => s.trim());
           return { start, end };
         }
       ),
@@ -60,27 +60,20 @@ function normalizeAvailability(avail: unknown): Availability {
 }
 
 function getAvailabilityString(availability: Availability): string {
-  if (!availability) return 'Not specified';
-  if (typeof availability === 'string') return availability;
-  
-  const { timeSlots, days } = availability;
-  if (!timeSlots?.length || !days?.length) return 'Not specified';
-  
-  const timeRange = timeSlots
-    .map(slot => `${slot.start}-${slot.end}`)
-    .join(', ');
-  return `${days.join(', ')} at ${timeRange}`;
-}
+  if (!availability) return "Not specified";
+  if (typeof availability === "string") return availability;
 
-function getLocationString(city?: string, state?: string): string {
-  const parts = [];
-  if (city) parts.push(city);
-  if (state) parts.push(state);
-  return parts.length > 0 ? parts.join(', ') : 'Location not specified';
+  const { timeSlots, days } = availability;
+  if (!timeSlots?.length || !days?.length) return "Not specified";
+
+  const timeRange = timeSlots
+    .map((slot) => `${slot.start}-${slot.end}`)
+    .join(", ");
+  return `${days.join(", ")} at ${timeRange}`;
 }
 
 export default function HomePage() {
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [user, setUser] = useState<{ uid: string } | null>(null);
@@ -98,7 +91,7 @@ export default function HomePage() {
       try {
         setLoading(true);
         const db = getFirestore();
-        const usersQuery = query(collection(db, 'users'));
+        const usersQuery = query(collection(db, "users"));
         const querySnapshot = await getDocs(usersQuery);
         const usersData: User[] = [];
 
@@ -113,14 +106,14 @@ export default function HomePage() {
           if (hasCompletedProfile) {
             usersData.push({
               id: doc.id,
-              firstName: data.firstName || '',
-              lastName: data.lastName || '',
-              email: data.email || '',
-              avatarUrl: data.avatarUrl || '',
+              firstName: data.firstName || "",
+              lastName: data.lastName || "",
+              email: data.email || "",
+              avatarUrl: data.avatarUrl || "",
               skillsOffered: data.skillsOffered || [],
               skillsWanted: data.skillsWanted || [],
-              city: data.city || '',
-              state: data.state || '',
+              city: data.city || "",
+              state: data.state || "",
               availability: normalizeAvailability(data.availability),
               profileVisibility: data.profileVisibility || false,
             });
@@ -129,7 +122,7 @@ export default function HomePage() {
 
         setUsers(usersData);
       } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error("Error fetching users:", error);
       } finally {
         setLoading(false);
       }
@@ -144,8 +137,8 @@ export default function HomePage() {
 
     const searchLower = searchQuery.toLowerCase();
     const fullName = `${userData.firstName} ${userData.lastName}`.toLowerCase();
-    const skillsOffered = userData.skillsOffered?.join(' ').toLowerCase() || '';
-    const skillsWanted = userData.skillsWanted?.join(' ').toLowerCase() || '';
+    const skillsOffered = userData.skillsOffered?.join(" ").toLowerCase() || "";
+    const skillsWanted = userData.skillsWanted?.join(" ").toLowerCase() || "";
     const location = `${userData.city} ${userData.state}`.toLowerCase();
 
     return (
@@ -235,12 +228,12 @@ export default function HomePage() {
             <CardContent className="p-8 text-center">
               <Sparkles className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {searchQuery ? 'No matches found' : 'No users available'}
+                {searchQuery ? "No matches found" : "No users available"}
               </h3>
               <p className="text-gray-500 mb-4">
                 {searchQuery
-                  ? 'Try adjusting your search terms or filters.'
-                  : 'Be the first to create a profile and start skill swapping!'}
+                  ? "Try adjusting your search terms or filters."
+                  : "Be the first to create a profile and start skill swapping!"}
               </p>
               {!user && (
                 <Button asChild>
@@ -253,8 +246,8 @@ export default function HomePage() {
           <>
             <div className="flex justify-between items-center mb-6 max-w-4xl mx-auto">
               <p className="text-gray-600">
-                Found {filteredUsers.length}{' '}
-                {filteredUsers.length === 1 ? 'person' : 'people'}
+                Found {filteredUsers.length}{" "}
+                {filteredUsers.length === 1 ? "person" : "people"}
                 {searchQuery && ` matching "${searchQuery}"`}
               </p>
             </div>
@@ -265,11 +258,16 @@ export default function HomePage() {
                   id={userData.id}
                   firstName={userData.firstName}
                   lastName={userData.lastName}
-                  avatar={userData.avatarUrl}
-                  location={getLocationString(userData.city, userData.state)}
-                  availability={getAvailabilityString(userData.availability)}
+                  email={userData.email}
+                  avatarUrl={userData.avatarUrl}
+                  city={userData.city}
+                  state={userData.state}
+                  availability={getAvailabilityString(
+                    userData.availability || ""
+                  )}
                   skillsOffered={userData.skillsOffered || []}
                   skillsWanted={userData.skillsWanted || []}
+                  isProfilePublic={userData.profileVisibility}
                 />
               ))}
             </div>

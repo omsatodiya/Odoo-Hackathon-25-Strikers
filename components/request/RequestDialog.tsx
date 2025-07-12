@@ -1,29 +1,32 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface RequestDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { skillOffered: string; skillWanted: string; message: string }) => void;
+  onSubmit: (data: {
+    skillOffered: string;
+    skillWanted: string;
+    message: string;
+  }) => void;
   userSkills: string[];
   recipientSkills: string[];
 }
@@ -35,15 +38,15 @@ export default function RequestDialog({
   userSkills,
   recipientSkills,
 }: RequestDialogProps) {
-  const [skillOffered, setSkillOffered] = useState('');
-  const [skillWanted, setSkillWanted] = useState('');
-  const [message, setMessage] = useState('');
+  const [skillOffered, setSkillOffered] = useState("");
+  const [skillWanted, setSkillWanted] = useState("");
+  const [message, setMessage] = useState("");
 
   const handleSubmit = () => {
     onSubmit({ skillOffered, skillWanted, message });
-    setSkillOffered('');
-    setSkillWanted('');
-    setMessage('');
+    setSkillOffered("");
+    setSkillWanted("");
+    setMessage("");
     onClose();
   };
 
@@ -55,7 +58,7 @@ export default function RequestDialog({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="skill-offered">Skill you'll teach</Label>
+            <Label htmlFor="skill-offered">Skill you&apos;ll teach</Label>
             <Select value={skillOffered} onValueChange={setSkillOffered}>
               <SelectTrigger id="skill-offered">
                 <SelectValue placeholder="Select a skill" />
@@ -95,8 +98,15 @@ export default function RequestDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={!skillOffered || !skillWanted}>Send Request</Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!skillOffered || !skillWanted}
+          >
+            Send Request
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,4 +1,3 @@
-
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,10 +32,12 @@ interface User {
   skillsWanted?: string[];
   city?: string;
   state?: string;
-  availability?: string | {
-    timeSlots: TimeSlot[];
-    days: string[];
-  };
+  availability?:
+    | string
+    | {
+        timeSlots: TimeSlot[];
+        days: string[];
+      };
   isProfilePublic?: boolean | string | number;
   bio?: string;
   isVerified?: boolean;
@@ -45,8 +46,26 @@ interface User {
 async function getUserProfile(id: string): Promise<User | null> {
   try {
     const db = getFirestore(app);
-    const userRef = doc(db, 'users', id);
+    const userRef = doc(db, "users", id);
     const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      return null;
+    }
+
+    return {
+      id: userSnap.id,
+      ...(userSnap.data() as Omit<User, "id">),
+    };
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    return null;
+  }
+}
+
+interface ProfilePageProps {
+  params: Promise<{ id: string }>;
+}
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { id } = await params;
@@ -170,33 +189,80 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   </div>
                 )}
 
-    return {
-      id: userSnap.id,
-      ...userSnap.data() as Omit<User, 'id'>
-    };
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    return null;
-  }
-}
+                {/* Availability */}
+                {getAvailabilityText() && (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Clock className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                    <span className="text-gray-700 font-medium">
+                      {getAvailabilityText()}
+                    </span>
+                  </div>
+                )}
 
-export default async function ProfilePage({ params }: { params: { id: string } }) {
-  const user = await getUserProfile(params.id);
+                {/* Bio */}
+                {user.bio && (
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 mb-2">About</h3>
+                    <p className="text-gray-700 leading-relaxed">{user.bio}</p>
+                  </div>
+                )}
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-8 px-4">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">User Not Found</h2>
-          <p className="text-gray-600">The user profile you're looking for doesn't exist.</p>
-        </div>
+                {/* Skills to Share */}
+                {user.skillsOffered && user.skillsOffered.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <User className="w-5 h-5 text-blue-600" />
+                      Skills to Share
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {user.skillsOffered.map((skill) => (
+                        <Badge
+                          key={skill}
+                          variant="secondary"
+                          className="bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        >
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Skills to Learn */}
+                {user.skillsWanted && user.skillsWanted.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Handshake className="w-5 h-5 text-green-600" />
+                      Skills to Learn
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {user.skillsWanted.map((skill) => (
+                        <Badge
+                          key={skill}
+                          variant="secondary"
+                          className="bg-green-50 text-green-700 hover:bg-green-100"
+                        >
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  Private Profile
+                </h3>
+                <p className="text-gray-600">
+                  This profile is private and not available for viewing.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    );
-  }
-
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ProfileContent user={user} />
-    </Suspense>
+    </div>
   );
 }
