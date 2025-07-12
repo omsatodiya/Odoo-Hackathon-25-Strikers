@@ -1,27 +1,19 @@
-"use client";
+'use client';
 
-import React from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Clock, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import { getFirestore, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { app } from "@/lib/firebase";
+import RequestDialog from "@/components/request/RequestDialog";
 
-interface TimeSlot {
-  start: string;
-  end: string;
-}
-
-interface Availability {
-  timeSlots: TimeSlot[];
-  days: string[];
-}
-
-interface User {
+interface UserCardProps {
   id: string;
   firstName: string;
   lastName: string;
+
   email: string;
   avatarUrl?: string;
   skillsOffered?: string[];
@@ -35,58 +27,46 @@ interface User {
   isVerified?: boolean;
 }
 
-interface UserCardProps {
-  user: User;
-}
+export default function UserCard({
+  id,
+  firstName,
+  lastName,
+  avatar,
+  location,
+  availability,
+  skillsOffered,
+  skillsWanted,
+}: UserCardProps) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-export default function UserCard({ user }: UserCardProps) {
-  const getUserInitials = () => {
-    const firstName = user.firstName || "";
-    const lastName = user.lastName || "";
-    const email = user.email || "";
-    if (firstName && lastName) {
-      return `${firstName[0]}${lastName[0]}`.toUpperCase();
-    }
-    if (firstName) {
-      return firstName[0].toUpperCase();
-    }
-    if (email) {
-      return email[0].toUpperCase();
-    }
-    return "U";
+  const getInitials = () => {
+    const firstInitial = firstName?.charAt(0) || '';
+    const lastInitial = lastName?.charAt(0) || '';
+    return firstInitial + lastInitial || 'U';
   };
 
-  const getLocation = () => {
-    const parts = [];
-    if (user.city) parts.push(user.city);
-    if (user.state) parts.push(user.state);
-    return parts.length > 0 ? parts.join(", ") : "Location not specified";
-  };
-
-  const getAvailabilityText = () => {
-    if (!user.availability) return null;
-    if (typeof user.availability === "string") {
-      return user.availability;
+  const handleRequestSubmit = async (data: { skillOffered: string; skillWanted: string; message: string }) => {
+    try {
+      const db = getFirestore(app);
+      await addDoc(collection(db, "requests"), {
+        senderId: "user1", // TODO: Replace with actual logged-in user ID
+        senderName: "Current User", // TODO: Replace with actual user name
+        receiverId: id,
+        receiverName: `${firstName} ${lastName}`,
+        skillOffered: data.skillOffered,
+        skillWanted: data.skillWanted,
+        message: data.message,
+        status: "pending",
+        createdAt: serverTimestamp(),
+      });
+      
+      setIsDialogOpen(false);
+      // TODO: Show success notification
+    } catch (error) {
+      console.error("Error creating request:", error);
+      // TODO: Show error notification
     }
-    if (
-      typeof user.availability === "object" &&
-      Array.isArray(user.availability.timeSlots) &&
-      Array.isArray(user.availability.days)
-    ) {
-      const days = user.availability.days.join(", ");
-      const times = user.availability.timeSlots
-        .map((slot: TimeSlot) => `${slot.start} - ${slot.end}`)
-        .join(", ");
-      return `${days} at ${times}`;
-    }
-    return null;
   };
-
-  const availabilityText = getAvailabilityText();
-  const isPublic =
-    user.isProfilePublic === true ||
-    user.isProfilePublic === "true" ||
-    user.isProfilePublic === 1;
 
   return (
     <Link href={`/profile/${user.id}`} className="block group">
@@ -128,77 +108,41 @@ export default function UserCard({ user }: UserCardProps) {
           <div className="text-sm text-gray-500 flex items-center gap-2">
             <MapPin className="w-4 h-4" />
             {getLocation()}
-          </div>
-          {availabilityText && (
-            <div className="text-xs text-blue-700 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              {availabilityText}
-            </div>
-          )}
-          {/* Short bio/description if available */}
-          {user.bio && (
-            <p className="text-gray-600 text-sm line-clamp-2 italic mt-1">
-              {user.bio}
-            </p>
-          )}
-        </div>
 
-        {/* Right: Skills and Request Button */}
-        <div className="flex flex-col gap-2 items-end min-w-[120px]">
-          {user.skillsOffered && user.skillsOffered.length > 0 && (
-            <div className="flex flex-wrap gap-1 justify-end">
-              {user.skillsOffered.slice(0, 3).map((skill, index) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"
-                >
-                  {skill}
-                </Badge>
-              ))}
-              {user.skillsOffered.length > 3 && (
-                <span className="text-xs text-gray-400 ml-1">
-                  +{user.skillsOffered.length - 3} more
-                </span>
-              )}
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Skills to Share</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {skillsOffered.map((skill) => (
+                  <Badge key={skill} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          )}
-          {user.skillsWanted && user.skillsWanted.length > 0 && (
-            <div className="flex flex-wrap gap-1 justify-end">
-              {user.skillsWanted.slice(0, 2).map((skill, index) => (
-                <Badge
-                  key={index}
-                  variant="outline"
-                  className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
-                >
-                  {skill}
-                </Badge>
-              ))}
-              {user.skillsWanted.length > 2 && (
-                <span className="text-xs text-gray-400 ml-1">
-                  +{user.skillsWanted.length - 2} more
-                </span>
-              )}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Skills to Learn</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {skillsWanted.map((skill) => (
+                  <Badge key={skill} variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-100">
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          )}
-          <Button
-            variant="default"
-            className="mt-4 md:mt-auto"
-            onClick={(e) => {
-              e.stopPropagation();
-              // TODO: Implement request logic/modal here
-              alert(`Request sent to ${user.firstName} ${user.lastName}`);
-            }}
-          >
-            Request
-          </Button>
-        </div>
-        {/* Click overlay for accessibility */}
-        <span
-          className="absolute inset-0"
-          aria-label={`View profile of ${user.firstName} ${user.lastName}`}
-        ></span>
+          </div>
+        </CardContent>
       </Card>
-    </Link>
+
+      <RequestDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSubmit={handleRequestSubmit}
+        userSkills={skillsOffered}
+        recipientSkills={skillsWanted}
+      />
+    </>
   );
 }

@@ -129,4 +129,19 @@ export interface UploadOptions {
   publicId?: string;
   transformation?: string;
   tags?: string[];
-} 
+}
+
+export interface Request {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  receiverId: string;
+  receiverName: string;
+  receiverAvatar?: string;
+  skillOffered: string;
+  skillWanted: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: Date;
+}

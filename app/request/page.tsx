@@ -1,93 +1,159 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useEffect } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import RequestCard from '@/components/request/RequestCard';
+import { Request } from '@/types';
+import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { app } from '@/lib/firebase';
 
-export default function UserDetailPage() {
-  // Dummy user data to display
-  const user = {
-    id: 'user123',
-    name: 'Alice Johnson',
-    avatarInitials: 'AJ',
-    bio: "Hi! I'm Alice, a passionate React developer and designer. Looking to exchange skills and collaborate!",
-    skillsCanTeach: ['React', 'UI/UX Design', 'TypeScript'],
-    skillsWantToLearn: ['Photography', 'Public Speaking'],
+interface FirestoreRequest {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  receiverId: string;
+  receiverName: string;
+  receiverAvatar?: string;
+  skillOffered: string;
+  skillWanted: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: Timestamp;
+}
+
+export default function RequestsPage() {
+  const [requests, setRequests] = useState<Request[]>([]);
+  const currentUserId = 'user1'; // TODO: Replace with actual logged-in user ID
+
+  useEffect(() => {
+    const db = getFirestore(app);
+    const requestsRef = collection(db, 'requests');
+    
+    // Query for requests where the current user is either the sender or receiver
+    const q = query(
+      requestsRef,
+      where('senderId', '==', currentUserId)
+    );
+
+    const q2 = query(
+      requestsRef,
+      where('receiverId', '==', currentUserId)
+    );
+
+    // Subscribe to both queries
+    const unsubscribe1 = onSnapshot(q, (snapshot) => {
+      const newRequests = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data() as FirestoreRequest,
+        createdAt: doc.data().createdAt?.toDate() || new Date()
+      }));
+      setRequests(prev => {
+        const filtered = prev.filter(r => r.receiverId === currentUserId);
+        return [...filtered, ...newRequests];
+      });
+    });
+
+    const unsubscribe2 = onSnapshot(q2, (snapshot) => {
+      const newRequests = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data() as FirestoreRequest,
+        createdAt: doc.data().createdAt?.toDate() || new Date()
+      }));
+      setRequests(prev => {
+        const filtered = prev.filter(r => r.senderId === currentUserId);
+        return [...filtered, ...newRequests];
+      });
+    });
+
+    return () => {
+      unsubscribe1();
+      unsubscribe2();
+    };
+  }, [currentUserId]);
+
+  const sentRequests = requests.filter(request => request.senderId === currentUserId);
+  const receivedRequests = requests.filter(request => request.receiverId === currentUserId);
+
+  const handleAccept = async (requestId: string) => {
+    try {
+      const db = getFirestore(app);
+      const requestRef = doc(db, 'requests', requestId);
+      await updateDoc(requestRef, {
+        status: 'accepted'
+      });
+      // TODO: Show success notification
+    } catch (error) {
+      console.error('Error accepting request:', error);
+      // TODO: Show error notification
+    }
   };
 
-  // Dialog state to show "Request" form/modal
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
-  const [message, setMessage] = useState('');
+  const handleReject = async (requestId: string) => {
+    try {
+      const db = getFirestore(app);
+      const requestRef = doc(db, 'requests', requestId);
+      await updateDoc(requestRef, {
+        status: 'rejected'
+      });
+      // TODO: Show success notification
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      // TODO: Show error notification
+    }
+  };
 
-  // For now, just a dummy submit handler
-  const handleRequestSubmit = () => {
-    alert(`Request sent to ${user.name} with message: "${message}"`);
-    setRequestDialogOpen(false);
-    setMessage('');
+  const handleDelete = async (requestId: string) => {
+    try {
+      const db = getFirestore(app);
+      const requestRef = doc(db, 'requests', requestId);
+      await deleteDoc(requestRef);
+      // TODO: Show success notification
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      // TODO: Show error notification
+    }
   };
 
   return (
-    <main className="container max-w-3xl mx-auto px-4 py-8">
-      <Card>
-        <CardHeader className="flex items-center space-x-6">
-          <Avatar className="h-20 w-20">
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-3xl font-bold">
-              {user.avatarInitials}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <CardTitle className="text-2xl">{user.name}</CardTitle>
-            <CardDescription className="mt-1 text-gray-600">{user.bio}</CardDescription>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Skills I Can Teach</h3>
-            <ul className="list-disc list-inside space-y-1 text-green-700">
-              {user.skillsCanTeach.map((skill) => (
-                <li key={skill}>{skill}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Skills I Want to Learn</h3>
-            <ul className="list-disc list-inside space-y-1 text-blue-700">
-              {user.skillsWantToLearn.map((skill) => (
-                <li key={skill}>{skill}</li>
-              ))}
-            </ul>
-          </div>
-
-          <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg" className="w-full">
-                Request Skill Swap
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Send a Request to {user.name}</DialogTitle>
-              </DialogHeader>
-              <Textarea
-                placeholder="Write a message to introduce yourself or explain your request"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={5}
-              />
-              <DialogFooter>
-                <Button onClick={handleRequestSubmit} disabled={!message.trim()}>
-                  Send Request
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardContent>
-      </Card>
-    </main>
+    <div className="container py-6">
+      <h1 className="text-2xl font-bold mb-6">Skill Swap Requests</h1>
+      
+      <Tabs defaultValue="received" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="received">Received</TabsTrigger>
+          <TabsTrigger value="sent">Sent</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="received" className="space-y-4">
+          {receivedRequests.map((request) => (
+            <RequestCard
+              key={request.id}
+              request={request}
+              type="received"
+              onAccept={() => handleAccept(request.id)}
+              onReject={() => handleReject(request.id)}
+            />
+          ))}
+          {receivedRequests.length === 0 && (
+            <p className="text-center text-gray-500 py-4">No requests received</p>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="sent" className="space-y-4">
+          {sentRequests.map((request) => (
+            <RequestCard
+              key={request.id}
+              request={request}
+              type="sent"
+              onDelete={() => handleDelete(request.id)}
+            />
+          ))}
+          {sentRequests.length === 0 && (
+            <p className="text-center text-gray-500 py-4">No requests sent</p>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
