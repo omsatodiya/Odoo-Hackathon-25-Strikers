@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, Home, BookOpen, Info, Phone } from "lucide-react";
+import { User, LogOut, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -30,12 +30,7 @@ interface UserProfile {
   avatarUrl?: string;
 }
 
-const navItems: NavItem[] = [
-  { label: "Home", href: "/", icon: Home },
-  { label: "Skills", href: "/skills", icon: BookOpen },
-  { label: "About", href: "/about", icon: Info },
-  { label: "Contact", href: "/contact", icon: Phone },
-];
+const navItems: NavItem[] = [];
 
 export default function Navbar() {
   const router = useRouter();
@@ -43,6 +38,7 @@ export default function Navbar() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>({});
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -61,6 +57,7 @@ export default function Navbar() {
               email: data.email || currentUser.email || "",
               avatarUrl: data.avatarUrl || "",
             });
+            setIsAdmin(data.role === "admin" || data.isAdmin === true);
           } else {
             // Fallback to auth user data
             setUserProfile({
@@ -70,6 +67,7 @@ export default function Navbar() {
               email: currentUser.email || "",
               avatarUrl: currentUser.photoURL || "",
             });
+            setIsAdmin(false);
           }
         } catch (error) {
           console.error("Error fetching user profile:", error);
@@ -81,9 +79,11 @@ export default function Navbar() {
             email: currentUser.email || "",
             avatarUrl: currentUser.photoURL || "",
           });
+          setIsAdmin(false);
         }
       } else {
         setUserProfile({});
+        setIsAdmin(false);
       }
 
       setLoading(false);
@@ -210,6 +210,14 @@ export default function Navbar() {
                   </div>
                 </div>
                 <DropdownMenuSeparator />
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin">
+                      <Shield className="mr-2 h-4 w-4 text-blue-600" />
+                      <span>Admin Dashboard</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleProfileClick}>
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>

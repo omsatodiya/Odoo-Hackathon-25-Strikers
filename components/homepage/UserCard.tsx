@@ -3,9 +3,7 @@
 import { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { MapPin, Clock } from "lucide-react";
+import { MapPin, Clock, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { getFirestore, addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { app } from "@/lib/firebase";
@@ -15,11 +13,18 @@ interface UserCardProps {
   id: string;
   firstName: string;
   lastName: string;
-  avatar?: string;
-  location: string;
-  availability: string;
-  skillsOffered: string[];
-  skillsWanted: string[];
+
+  email: string;
+  avatarUrl?: string;
+  skillsOffered?: string[];
+  skillsWanted?: string[];
+  city?: string;
+  state?: string;
+  availability?: string | Availability;
+  profileVisibility?: boolean;
+  bio?: string;
+  isProfilePublic?: boolean | string | number;
+  isVerified?: boolean;
 }
 
 export default function UserCard({
@@ -64,35 +69,46 @@ export default function UserCard({
   };
 
   return (
-    <>
-      <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 bg-white/80 backdrop-blur-sm border-0">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <Link href={`/profile/${id}`} className="flex items-center space-x-3 group">
-              <Avatar className="h-12 w-12 border-2 border-white shadow-md group-hover:border-blue-100 transition-colors duration-300">
-                <AvatarImage src={avatar} />
-                <AvatarFallback>{getInitials()}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
-                  {`${firstName || ''} ${lastName || ''}`}
-                </h3>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span>{location}</span>
-                  <span className="text-gray-300">•</span>
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{availability}</span>
-                </div>
-              </div>
-            </Link>
-            <Button
-              variant="outline"
-              className="border-green-600 text-green-600 hover:bg-green-50"
-              onClick={() => setIsDialogOpen(true)}
-            >
-              Request
-            </Button>
+    <Link href={`/profile/${user.id}`} className="block group">
+      <Card
+        className={`transition-shadow duration-200 w-full flex flex-col md:flex-row items-center md:items-start p-6 gap-6 shadow-sm border border-gray-200 group-hover:shadow-xl group-hover:border-blue-400 bg-white/90 cursor-pointer relative ${
+          isPublic ? "ring-2 ring-blue-200" : "ring-0"
+        }`}
+      >
+        {/* Left: Profile Avatar */}
+        <div className="flex-shrink-0">
+          <Avatar className="h-20 w-20 ring-2 ring-gray-100 group-hover:ring-blue-400 transition">
+            <AvatarImage
+              src={user.avatarUrl || ""}
+              alt={`${user.firstName} ${user.lastName}`}
+            />
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl">
+              {getUserInitials()}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+
+        {/* Middle: Info */}
+        <div className="flex-1 w-full space-y-2 md:space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center md:gap-3">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-xl text-gray-900 group-hover:text-blue-700 transition">
+                {user.firstName} {user.lastName}
+              </h3>
+              {user.isVerified && (
+                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              )}
+            </div>
+            {isPublic && (
+              <span className="ml-0 md:ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                Public
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-gray-500 flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            {getLocation()}
+
           </div>
 
           <div className="space-y-3">

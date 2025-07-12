@@ -1,27 +1,35 @@
-'use client';
+"use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-import { ArrowLeft, Send } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import React from 'react';
+import { ArrowLeft, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
+import React from "react";
 
 const dummyReceiver = {
-  id: 'user123',
-  name: 'Jordan Smith',
-  avatarUrl: '',
-  initials: 'JS',
+  id: "user123",
+  name: "Jordan Smith",
+  avatarUrl: "",
+  initials: "JS",
 };
 
 const dummyMessages = [
-  { id: 1, sender: 'me', text: 'Hey Jordan! Are you still up for the skill swap this weekend?' },
-  { id: 2, sender: 'them', text: 'Yes, definitely! I’m excited to learn from you.' },
-  { id: 3, sender: 'me', text: 'Awesome! I’ll send you the calendar invite.' },
+  {
+    id: 1,
+    sender: "me",
+    text: "Hey Jordan! Are you still up for the skill swap this weekend?",
+  },
+  {
+    id: 2,
+    sender: "them",
+    text: "Yes, definitely! I’m excited to learn from you.",
+  },
+  { id: 3, sender: "me", text: "Awesome! I’ll send you the calendar invite." },
 ];
 
-export default function ChatPage({ params }: { params: { id: string } }) {
+export default function ChatPage() {
   const router = useRouter();
 
   return (
@@ -52,13 +60,15 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         {dummyMessages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${
+              msg.sender === "me" ? "justify-end" : "justify-start"
+            }`}
           >
             <div
               className={`px-4 py-2 rounded-lg max-w-xs text-sm ${
-                msg.sender === 'me'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-800'
+                msg.sender === "me"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-800"
               }`}
             >
               {msg.text}
