@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MapPin, Clock } from 'lucide-react';
+import React from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MapPin, Clock } from "lucide-react";
 
 export default function UserCard() {
   return (
@@ -35,24 +35,59 @@ export default function UserCard() {
         </div>
 
         <p className="text-sm text-gray-600">
-          Enthusiastic learner and passionate about sharing skills with the community.
+          Enthusiastic learner and passionate about sharing skills with the
+          community.
         </p>
 
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-1">Skills Offered</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-1">
+            Skills Offered
+          </h4>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="text-xs bg-green-50 text-green-700 hover:bg-green-100">Web Design</Badge>
-            <Badge variant="secondary" className="text-xs bg-green-50 text-green-700 hover:bg-green-100">Public Speaking</Badge>
-            <Badge variant="secondary" className="text-xs bg-green-50 text-green-700 hover:bg-green-100">Drawing</Badge>
+            <Badge
+              variant="secondary"
+              className="text-xs bg-green-50 text-green-700 hover:bg-green-100"
+            >
+              Web Design
+            </Badge>
+            <Badge
+              variant="secondary"
+              className="text-xs bg-green-50 text-green-700 hover:bg-green-100"
+            >
+              Public Speaking
+            </Badge>
+            <Badge
+              variant="secondary"
+              className="text-xs bg-green-50 text-green-700 hover:bg-green-100"
+            >
+              Drawing
+            </Badge>
           </div>
         </div>
 
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-1">Skills Wanted</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-1">
+            Skills Wanted
+          </h4>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50">Guitar</Badge>
-            <Badge variant="outline" className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50">Cooking</Badge>
-            <Badge variant="outline" className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50">Video Editing</Badge>
+            <Badge
+              variant="outline"
+              className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+            >
+              Guitar
+            </Badge>
+            <Badge
+              variant="outline"
+              className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+            >
+              Cooking
+            </Badge>
+            <Badge
+              variant="outline"
+              className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+            >
+              Video Editing
+            </Badge>
           </div>
         </div>
       </div>
