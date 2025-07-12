@@ -1,9 +1,11 @@
+"use client"
 import { notFound } from "next/navigation";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { app } from "@/lib/firebase";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import {
   MapPin,
@@ -53,6 +55,7 @@ async function getUserProfile(id: string): Promise<User | null> {
 }
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
+  const router = useRouter();
   const { id } = await params;
   const user = await getUserProfile(id);
   if (!user) return notFound();
@@ -138,7 +141,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               <div className="space-y-6">
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-2">
-                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5">
+                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5" onClick={() => router.push(`/chat/${user}`)}>
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Message
                   </Button>
