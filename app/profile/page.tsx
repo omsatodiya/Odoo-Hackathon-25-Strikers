@@ -570,13 +570,13 @@ export default function ProfilePage() {
           ref={infoCardRef}
           className={`
             rounded-xl bg-background/95 backdrop-blur-xl
-            ${
-              theme === "dark"
-                ? "border border-white/10"
-                : "border border-black/10"
-            }
-            shadow-lg sm:shadow-2xl
-          `}
+              ${
+                theme === "dark"
+                  ? "border border-white/10"
+                  : "border border-black/10"
+              }
+              shadow-lg sm:shadow-2xl
+            `}
         >
           <div className="p-4 sm:p-6 border-b flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-semibold">
