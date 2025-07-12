@@ -13,6 +13,7 @@ import {
   Shield,
   MessageSquare,
   Handshake,
+  CheckCircle,
 } from "lucide-react";
 import React from "react";
 
@@ -39,6 +40,7 @@ interface User {
   availability?: string | Availability;
   isProfilePublic?: boolean | string | number;
   bio?: string;
+  isVerified?: boolean;
 }
 
 interface ProfilePageProps {
@@ -120,9 +122,14 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                 )}
               </div>
               <div className="text-center">
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {user.firstName} {user.lastName}
-                </h1>
+                <div className="flex items-center justify-center gap-2">
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    {user.firstName} {user.lastName}
+                  </h1>
+                  {user.isVerified && (
+                    <CheckCircle className="w-6 h-6 text-green-300 flex-shrink-0" />
+                  )}
+                </div>
                 {user.email && (
                   <div className="flex items-center justify-center gap-2 mt-2 text-blue-100">
                     <Mail className="w-4 h-4" />

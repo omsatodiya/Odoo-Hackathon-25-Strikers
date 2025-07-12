@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, Clock } from "lucide-react";
+import { MapPin, Clock, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 interface TimeSlot {
@@ -32,6 +32,7 @@ interface User {
   profileVisibility?: boolean;
   bio?: string;
   isProfilePublic?: boolean | string | number;
+  isVerified?: boolean;
 }
 
 interface UserCardProps {
@@ -110,9 +111,14 @@ export default function UserCard({ user }: UserCardProps) {
         {/* Middle: Info */}
         <div className="flex-1 w-full space-y-2 md:space-y-3">
           <div className="flex flex-col md:flex-row md:items-center md:gap-3">
-            <h3 className="font-semibold text-xl text-gray-900 group-hover:text-blue-700 transition">
-              {user.firstName} {user.lastName}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-xl text-gray-900 group-hover:text-blue-700 transition">
+                {user.firstName} {user.lastName}
+              </h3>
+              {user.isVerified && (
+                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              )}
+            </div>
             {isPublic && (
               <span className="ml-0 md:ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
                 Public
